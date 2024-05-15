@@ -6,6 +6,7 @@ from create_annotations import (
     create_annotation_from_yolo_results_format,
     coco_format,
 )
+import os
 import cv2
 import argparse
 import json
@@ -20,12 +21,34 @@ import imagesize
 YOLO_DARKNET_SUB_DIR = "YOLO_darknet"
 
 classes = [
-    "matricula",
-    "cara"
+    "class1",
+    "class2"
 ]
 
+def update_classes(path):
+    global classes
 
-def get_images_info_and_annotations(opt):
+    classes_file_dir = os.path.join(os.path.dirname(path),'obj.names')
+    print(classes_file_dir)
+    
+    if not os.path.exists(classes_file_dir):
+        return
+    
+    classes = []
+    
+    classes_file = open(classes_file_dir)
+    
+    line = classes_file.readline().strip()
+    
+    while line:
+        
+        classes.append(line)
+        
+        line = classes_file.readline().strip()
+    
+    
+def get_images_info_and_annotations(opt):   
+    update_classes(opt.path) 
     path = Path(opt.path)
     annotations = []
     images_annotations = []
@@ -38,7 +61,7 @@ def get_images_info_and_annotations(opt):
             read_lines = fp.readlines()
         file_paths = [Path(line.replace("\n", "")) for line in read_lines]
 
-    image_id = 0
+    image_id = 1
     annotation_id = 1  # In COCO dataset format, you must start annotation id with '1'
 
     for file_path in file_paths:
@@ -220,7 +243,7 @@ def get_args():
 
 def main(opt):
     output_name = opt.output
-    output_path = "output/" + output_name
+    output_path = output_name
 
     print("Start!")
 
@@ -235,22 +258,25 @@ def main(opt):
 
         for index, label in enumerate(classes):
             categories = {
-                "supercategory": "Defect",
+                "supercategory": "",
                 "id": index + 1,  # ID starts with '1' .
                 "name": label,
             }
             coco_format["categories"].append(categories)
 
+        coco_format['info'] = {"contributor":"","date_created":"","description":"","url":"","version":"","year":""}
+        coco_format['licenses'] = [{"name":"","id":0,"url":""}]
+        
         if opt.results == True:
             dict_list = []
             for l in coco_format["annotations"]:
                 dict_list.append(l[0])
             with open(output_path, "w") as outfile:
-                str = json.dump(dict_list, outfile, indent=4)
+                str = json.dump(dict_list, outfile, indent=4,ensure_ascii=False)
 
         else:
             with open(output_path, "w") as outfile:
-                json.dump(coco_format, outfile, indent=4)
+                json.dump(coco_format, outfile, indent=4,ensure_ascii=False)
 
         print("Finished!")
 
